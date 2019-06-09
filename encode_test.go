@@ -62,7 +62,7 @@ func TestOmitEmpty(t *testing.T) {
 	o.Mr = map[string]interface{}{}
 	o.Mo = map[string]interface{}{}
 
-	got, err := MarshalIndent(&o, "", " ")
+	got, err := MarshalIndent(&o, "", " ", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
