@@ -1,3 +1,3 @@
-module github.com/JuanTorr/jt
+module github.com/JuanTorr/jsont
 
 go 1.12

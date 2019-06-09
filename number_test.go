@@ -5,6 +5,7 @@
 package jsont
 
 import (
+	"encoding/json"
 	"regexp"
 	"testing"
 )
@@ -68,7 +69,7 @@ func TestNumberIsValid(t *testing.T) {
 		}
 
 		var f float64
-		if err := Unmarshal([]byte(test), &f); err != nil {
+		if err := json.Unmarshal([]byte(test), &f); err != nil {
 			t.Errorf("%s should be valid but Unmarshal failed: %v", test, err)
 		}
 
@@ -107,7 +108,7 @@ func TestNumberIsValid(t *testing.T) {
 		}
 
 		var f float64
-		if err := Unmarshal([]byte(test), &f); err == nil {
+		if err := json.Unmarshal([]byte(test), &f); err == nil {
 			t.Errorf("%s should be invalid but unmarshal wrote %v", test, f)
 		}
 

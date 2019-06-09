@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-func ExampleMarshal() {
+func exampleMarshal() {
 	type ColorGroup struct {
 		ID     int
 		Name   string
@@ -34,7 +34,7 @@ func ExampleMarshal() {
 	// {"ID":1,"Name":"Reds","Colors":["Crimson","Red","Ruby","Maroon"]}
 }
 
-func ExampleUnmarshal() {
+func exampleUnmarshal() {
 	var jsonBlob = []byte(`[
 	{"Name": "Platypus", "Order": "Monotremata"},
 	{"Name": "Quoll",    "Order": "Dasyuromorphia"}
@@ -54,7 +54,7 @@ func ExampleUnmarshal() {
 }
 
 // This example uses a Decoder to decode a stream of distinct JSON values.
-func ExampleDecoder() {
+func exampleDecoder() {
 	const jsonStream = `
 	{"Name": "Ed", "Text": "Knock knock."}
 	{"Name": "Sam", "Text": "Who's there?"}
@@ -84,7 +84,7 @@ func ExampleDecoder() {
 }
 
 // This example uses a Decoder to decode a stream of distinct JSON values.
-func ExampleDecoder_Token() {
+func exampleDecoder_Token() {
 	const jsonStream = `
 	{"Message": "Hello", "Array": [1, 2, 3], "Null": null, "Number": 1.234}
 `
@@ -121,7 +121,7 @@ func ExampleDecoder_Token() {
 }
 
 // This example uses a Decoder to decode a streaming array of JSON objects.
-func ExampleDecoder_Decode_stream() {
+func exampleDecoder_Decode_stream() {
 	const jsonStream = `
 	[
 		{"Name": "Ed", "Text": "Knock knock."},
@@ -174,7 +174,7 @@ func ExampleDecoder_Decode_stream() {
 }
 
 // This example uses RawMessage to delay parsing part of a JSON message.
-func ExampleRawMessage_unmarshal() {
+func exampleRawMessage_unmarshal() {
 	type Color struct {
 		Space string
 		Point json.RawMessage // delay parsing until we know the color space
@@ -220,7 +220,7 @@ func ExampleRawMessage_unmarshal() {
 }
 
 // This example uses RawMessage to use a precomputed JSON during marshal.
-func ExampleRawMessage_marshal() {
+func exampleRawMessage_marshal() {
 	h := json.RawMessage(`{"precomputed": true}`)
 
 	c := struct {
@@ -243,7 +243,7 @@ func ExampleRawMessage_marshal() {
 	// }
 }
 
-func ExampleIndent() {
+func exampleIndent() {
 	type Road struct {
 		Name   string
 		Number int
@@ -274,7 +274,7 @@ func ExampleIndent() {
 	// =]
 }
 
-func ExampleMarshalIndent() {
+func exampleMarshalIndent() {
 	data := map[string]int{
 		"a": 1,
 		"b": 2,
@@ -293,7 +293,7 @@ func ExampleMarshalIndent() {
 	// <prefix>}
 }
 
-func ExampleValid() {
+func exampleValid() {
 	goodJSON := `{"example": 1}`
 	badJSON := `{"example":2:]}}`
 
