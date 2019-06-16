@@ -6,6 +6,77 @@ Forked from `go version go1.12.5 windows/amd64`
 
 ## Usage
 
+### Example using the `json:",default"` option
+
+```go
+package main
+
+import (
+    "fmt"
+
+    "github.com/JuanTorr/jsont"
+)
+
+//Only the id's and structs are marked as default
+type user struct {
+    ID      int    `json:"id,default"`
+    Name    string `json:"name"`
+    Surname string `json:"surname"`
+    Age     int    `json:"age"`
+    Rol     rol    `json:"rol,default"`
+    Friend  *user  `json:"friend,default,omitempty"`
+}
+type rol struct {
+    ID    int    `json:"id,default"`
+    Rol   string `json:"rol_name"`
+    Group group  `json:"group,default"`
+}
+type group struct {
+    ID      int     `json:"id,default"`
+    Key     string  `json:"key"`
+    Anthing float64 `json:"number_anything,string"`
+}
+
+func main() {
+    var j []byte
+    var err error
+    f := user{1, "Paul", "McCartney", 19, rol{1, "admin", group{1, "ABC4", 12.9}}, nil}
+    u := user{2, "John", "Lennon", 20, rol{1, "admin", group{1, "ABC4", 12.9}}, &f}
+
+    //marshaling single struct
+    j, err = jsont.MarshalIndent(u, "", "    ", jsont.Defaults)
+    if err != nil {
+        panic(err)
+    }
+    fmt.Print(string(j), "\n\n")
+}
+```
+
+#### Output
+
+```json
+{
+    "id": 2,
+    "rol": {
+        "id": 1,
+        "group": {
+            "id": 1
+        }
+    },
+    "friend": {
+        "id": 1,
+        "rol": {
+            "id": 1,
+            "group": {
+                "id": 1
+            }
+        }
+    }
+}
+```
+
+### Example using fields
+
 ```go
 package main
 
@@ -67,10 +138,43 @@ func main() {
     fmt.Print(string(j), "\n\n")
     //[{"id":2,"name":"John","friend":{"id":1,"name":"Paul"}},{"id":2,"name":"John","friend":{"id":1,"name":"Paul"}}]
 }
+```
+
+#### Output 1
+
+```json
+{
+    "id": 2,
+    "name": "John",
+    "rol": {
+        "rol_name": "admin",
+        "group": {
+            "key": "ABC4"
+        }
+    }
+}
 
 ```
 
-### Encoder
+#### Output 2
+
+```json
+[
+    {
+        "id": 2,
+        "name": "John",
+        "friend": {}
+    },
+    {
+        "id": 2,
+        "name": "John",
+        "friend": {}
+    }
+]
+
+```
+
+### Example using Encoder
 
 ```go
 package main
@@ -158,5 +262,27 @@ func main() {
     })
 
     http.ListenAndServe(":3009", nil)
+}
+```
+
+#### Request output
+
+```json
+{
+    "numberResults": 2,
+    "results": [
+        {
+            "date": "12-12-12",
+            "idCompany": 1,
+            "idIndustry": 1,
+            "country": "México"
+        },
+        {
+            "date": "12-12-12",
+            "idCompany": 2,
+            "idIndustry": 1,
+            "country": "USA"
+        }
+    ]
 }
 ```

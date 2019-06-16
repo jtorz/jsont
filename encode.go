@@ -29,9 +29,19 @@ import (
 type F map[string]F
 
 var (
-	recursiveKey = "_jsont_"
-	//Recursive represent value when the field to marshal to self struct
+	//Recursive defines when a field is going to be marshalled with the same struct as the parent
 	Recursive = F{recursiveKey: nil}
+	//Defaults defines when a struct is going to be marshalled with the fields marked with the option `json:",default"`
+	//	type S {
+	//		Field  string `json:"field,default"`
+	//		Field2 int    `json:",default"`
+	//	}
+	Defaults = F{defaultsKey: nil}
+)
+
+const (
+	recursiveKey = "_jt_rec_"
+	defaultsKey  = "_jt_def_"
 )
 
 // Marshal returns the JSON encoding of v.
@@ -656,7 +666,13 @@ FieldLoop:
 			fv = fv.Field(i)
 		}
 		if fieldsTE != nil {
-			if _, ok := fieldsTE[f.name]; !ok {
+			_, isDef := fieldsTE[defaultsKey]
+			_, hasField := fieldsTE[f.name]
+			if isDef {
+				if !f.isDefault {
+					continue
+				}
+			} else if !hasField {
 				continue
 			}
 		}
@@ -674,11 +690,13 @@ FieldLoop:
 		if fieldsTE == nil {
 			f.encoder(e, fv, opts, nil)
 		} else {
-			fields := fieldsTE[f.name]
-			if _, ok := fields[recursiveKey]; ok {
+			subfields := fieldsTE[f.name]
+			_, isRec := fieldsTE[recursiveKey]
+			_, isDef := fieldsTE[defaultsKey]
+			if isRec || isDef {
 				f.encoder(e, fv, opts, fieldsTE)
 			} else {
-				f.encoder(e, fv, opts, fields)
+				f.encoder(e, fv, opts, subfields)
 			}
 		}
 	}
@@ -1064,6 +1082,7 @@ type field struct {
 	typ       reflect.Type
 	omitEmpty bool
 	quoted    bool
+	isDefault bool
 
 	encoder encoderFunc
 }
@@ -1180,6 +1199,7 @@ func typeFields(t reflect.Type) []field {
 						index:     index,
 						typ:       ft,
 						omitEmpty: opts.Contains("omitempty"),
+						isDefault: opts.Contains("default"),
 						quoted:    quoted,
 					}
 					field.nameBytes = []byte(field.name)
