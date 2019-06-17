@@ -691,7 +691,7 @@ FieldLoop:
 			f.encoder(e, fv, opts, nil)
 		} else {
 			subfields := fieldsTE[f.name]
-			_, isRec := fieldsTE[recursiveKey]
+			_, isRec := subfields[recursiveKey]
 			_, isDef := fieldsTE[defaultsKey]
 			if isRec || isDef {
 				f.encoder(e, fv, opts, fieldsTE)
