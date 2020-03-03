@@ -1,3 +1,3 @@
-module github.com/JuanTorr/jsont
+module github.com/jtorz/jsont
 
-go 1.12
+go 1.14

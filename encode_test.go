@@ -6,7 +6,7 @@ package jsont
 
 import (
 	"bytes"
-	"encoding/json"
+	"encoding"
 	"fmt"
 	"log"
 	"math"
@@ -76,6 +76,41 @@ type StringTag struct {
 	IntStr     int64   `json:",string"`
 	UintptrStr uintptr `json:",string"`
 	StrStr     string  `json:",string"`
+	NumberStr  Number  `json:",string"`
+}
+
+var stringTagExpected = `{
+ "BoolStr": "true",
+ "IntStr": "42",
+ "UintptrStr": "44",
+ "StrStr": "\"xzbit\"",
+ "NumberStr": "46"
+}`
+
+func TestStringTag(t *testing.T) {
+	var s StringTag
+	s.BoolStr = true
+	s.IntStr = 42
+	s.UintptrStr = 44
+	s.StrStr = "xzbit"
+	s.NumberStr = "46"
+	got, err := MarshalIndent(&s, "", " ", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := string(got); got != stringTagExpected {
+		t.Fatalf(" got: %s\nwant: %s\n", got, stringTagExpected)
+	}
+
+	// Verify that it round-trips.
+	var s2 StringTag
+	err = NewDecoder(bytes.NewReader(got)).Decode(&s2)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if !reflect.DeepEqual(s, s2) {
+		t.Fatalf("decode didn't match.\nsource: %#v\nEncoded as:\n%s\ndecode: %#v", s, string(got), s2)
+	}
 }
 
 // byte slices are special even if they're renamed types.
@@ -103,10 +138,45 @@ func TestEncodeRenamedByteSlice(t *testing.T) {
 	}
 }
 
+type SamePointerNoCycle struct {
+	Ptr1, Ptr2 *SamePointerNoCycle
+}
+
+var samePointerNoCycle = &SamePointerNoCycle{}
+
+type PointerCycle struct {
+	Ptr *PointerCycle
+}
+
+var pointerCycle = &PointerCycle{}
+
+type PointerCycleIndirect struct {
+	Ptrs []interface{}
+}
+
+var pointerCycleIndirect = &PointerCycleIndirect{}
+
+func init() {
+	ptr := &SamePointerNoCycle{}
+	samePointerNoCycle.Ptr1 = ptr
+	samePointerNoCycle.Ptr2 = ptr
+
+	pointerCycle.Ptr = pointerCycle
+	pointerCycleIndirect.Ptrs = []interface{}{pointerCycleIndirect}
+}
+
+func TestSamePointerNoCycle(t *testing.T) {
+	if _, err := Marshal(samePointerNoCycle, nil); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 var unsupportedValues = []interface{}{
 	math.NaN(),
 	math.Inf(-1),
 	math.Inf(1),
+	pointerCycle,
+	pointerCycleIndirect,
 }
 
 func TestUnsupportedValues(t *testing.T) {
@@ -422,18 +492,31 @@ type BugX struct {
 	BugB
 }
 
-// Issue 16042. Even if a nil interface value is passed in
-// as long as it implements MarshalJSON, it should be marshaled.
-type nilMarshaler string
+// golang.org/issue/16042.
+// Even if a nil interface value is passed in, as long as
+// it implements Marshaler, it should be marshaled.
+type nilJSONMarshaler string
 
-func (nm *nilMarshaler) MarshalJSON() ([]byte, error) {
+func (nm *nilJSONMarshaler) MarshalJSON() ([]byte, error) {
 	if nm == nil {
 		return Marshal("0zenil0", nil)
 	}
 	return Marshal("zenil:"+string(*nm), nil)
 }
 
-// Issue 16042.
+// golang.org/issue/34235.
+// Even if a nil interface value is passed in, as long as
+// it implements encoding.TextMarshaler, it should be marshaled.
+type nilTextMarshaler string
+
+func (nm *nilTextMarshaler) MarshalText() ([]byte, error) {
+	if nm == nil {
+		return []byte("0zenil0"), nil
+	}
+	return []byte("zenil:" + string(*nm)), nil
+}
+
+// See golang.org/issue/16042 and golang.org/issue/34235.
 func TestNilMarshal(t *testing.T) {
 	testCases := []struct {
 		v    interface{}
@@ -447,8 +530,11 @@ func TestNilMarshal(t *testing.T) {
 		{v: []byte(nil), want: `null`},
 		{v: struct{ M string }{"gopher"}, want: `{"M":"gopher"}`},
 		{v: struct{ M Marshaler }{}, want: `{"M":null}`},
-		{v: struct{ M Marshaler }{(*nilMarshaler)(nil)}, want: `{"M":"0zenil0"}`},
-		{v: struct{ M interface{} }{(*nilMarshaler)(nil)}, want: `{"M":null}`},
+		{v: struct{ M Marshaler }{(*nilJSONMarshaler)(nil)}, want: `{"M":"0zenil0"}`},
+		{v: struct{ M interface{} }{(*nilJSONMarshaler)(nil)}, want: `{"M":null}`},
+		{v: struct{ M encoding.TextMarshaler }{}, want: `{"M":null}`},
+		{v: struct{ M encoding.TextMarshaler }{(*nilTextMarshaler)(nil)}, want: `{"M":"0zenil0"}`},
+		{v: struct{ M interface{} }{(*nilTextMarshaler)(nil)}, want: `{"M":null}`},
 	}
 
 	for _, tt := range testCases {
@@ -549,6 +635,9 @@ func TestStringBytes(t *testing.T) {
 	// Test that encodeState.stringBytes and encodeState.string use the same encoding.
 	var r []rune
 	for i := '\u0000'; i <= unicode.MaxRune; i++ {
+		if testing.Short() && i > 1000 {
+			i = unicode.MaxRune
+		}
 		r = append(r, i)
 	}
 	s := string(r) + "\xff\xff\xffhello" // some invalid UTF-8 too
@@ -625,7 +714,7 @@ func TestEncodePointerString(t *testing.T) {
 		t.Errorf("Marshal = %s, want %s", got, want)
 	}
 	var back stringPointer
-	err = json.Unmarshal(b, &back)
+	err = Unmarshal(b, &back)
 	if err != nil {
 		t.Fatalf("Unmarshal: %v", err)
 	}
@@ -743,6 +832,37 @@ func TestEncodeBytekind(t *testing.T) {
 	}
 }
 
+func TestTextMarshalerMapKeysAreSorted(t *testing.T) {
+	b, err := Marshal(map[unmarshalerText]int{
+		{"x", "y"}: 1,
+		{"y", "x"}: 2,
+		{"a", "z"}: 3,
+		{"z", "a"}: 4,
+	}, nil)
+	if err != nil {
+		t.Fatalf("Failed to Marshal text.Marshaler: %v", err)
+	}
+	const want = `{"a:z":3,"x:y":1,"y:x":2,"z:a":4}`
+	if string(b) != want {
+		t.Errorf("Marshal map with text.Marshaler keys: got %#q, want %#q", b, want)
+	}
+}
+
+// https://golang.org/issue/33675
+func TestNilMarshalerTextMapKey(t *testing.T) {
+	b, err := Marshal(map[*unmarshalerText]int{
+		(*unmarshalerText)(nil): 1,
+		{"A", "B"}:              2,
+	}, nil)
+	if err != nil {
+		t.Fatalf("Failed to Marshal *text.Marshaler: %v", err)
+	}
+	const want = `{"":1,"A:B":2}`
+	if string(b) != want {
+		t.Errorf("Marshal map with *text.Marshaler keys: got %#q, want %#q", b, want)
+	}
+}
+
 var re = regexp.MustCompile
 
 // syntactic checks on form of marshaled floating point numbers.
@@ -817,6 +937,9 @@ func TestMarshalFloat(t *testing.T) {
 
 	var digits = "1.2345678901234567890123"
 	for i := len(digits); i >= 2; i-- {
+		if testing.Short() && i < len(digits)-4 {
+			break
+		}
 		for exp := -30; exp <= 30; exp++ {
 			for _, sign := range "+-" {
 				for bits := 32; bits <= 64; bits += 32 {
@@ -847,6 +970,107 @@ func TestMarshalFloat(t *testing.T) {
 	test(math.Copysign(0, -1), 32)
 }
 
+func TestMarshalRawMessageValue(t *testing.T) {
+	type (
+		T1 struct {
+			M RawMessage `json:",omitempty"`
+		}
+		T2 struct {
+			M *RawMessage `json:",omitempty"`
+		}
+	)
+
+	var (
+		rawNil   = RawMessage(nil)
+		rawEmpty = RawMessage([]byte{})
+		rawText  = RawMessage([]byte(`"foo"`))
+	)
+
+	tests := []struct {
+		in   interface{}
+		want string
+		ok   bool
+	}{
+		// Test with nil RawMessage.
+		{rawNil, "null", true},
+		{&rawNil, "null", true},
+		{[]interface{}{rawNil}, "[null]", true},
+		{&[]interface{}{rawNil}, "[null]", true},
+		{[]interface{}{&rawNil}, "[null]", true},
+		{&[]interface{}{&rawNil}, "[null]", true},
+		{struct{ M RawMessage }{rawNil}, `{"M":null}`, true},
+		{&struct{ M RawMessage }{rawNil}, `{"M":null}`, true},
+		{struct{ M *RawMessage }{&rawNil}, `{"M":null}`, true},
+		{&struct{ M *RawMessage }{&rawNil}, `{"M":null}`, true},
+		{map[string]interface{}{"M": rawNil}, `{"M":null}`, true},
+		{&map[string]interface{}{"M": rawNil}, `{"M":null}`, true},
+		{map[string]interface{}{"M": &rawNil}, `{"M":null}`, true},
+		{&map[string]interface{}{"M": &rawNil}, `{"M":null}`, true},
+		{T1{rawNil}, "{}", true},
+		{T2{&rawNil}, `{"M":null}`, true},
+		{&T1{rawNil}, "{}", true},
+		{&T2{&rawNil}, `{"M":null}`, true},
+
+		// Test with empty, but non-nil, RawMessage.
+		{rawEmpty, "", false},
+		{&rawEmpty, "", false},
+		{[]interface{}{rawEmpty}, "", false},
+		{&[]interface{}{rawEmpty}, "", false},
+		{[]interface{}{&rawEmpty}, "", false},
+		{&[]interface{}{&rawEmpty}, "", false},
+		{struct{ X RawMessage }{rawEmpty}, "", false},
+		{&struct{ X RawMessage }{rawEmpty}, "", false},
+		{struct{ X *RawMessage }{&rawEmpty}, "", false},
+		{&struct{ X *RawMessage }{&rawEmpty}, "", false},
+		{map[string]interface{}{"nil": rawEmpty}, "", false},
+		{&map[string]interface{}{"nil": rawEmpty}, "", false},
+		{map[string]interface{}{"nil": &rawEmpty}, "", false},
+		{&map[string]interface{}{"nil": &rawEmpty}, "", false},
+		{T1{rawEmpty}, "{}", true},
+		{T2{&rawEmpty}, "", false},
+		{&T1{rawEmpty}, "{}", true},
+		{&T2{&rawEmpty}, "", false},
+
+		// Test with RawMessage with some text.
+		//
+		// The tests below marked with Issue6458 used to generate "ImZvbyI=" instead "foo".
+		// This behavior was intentionally changed in Go 1.8.
+		// See https://golang.org/issues/14493#issuecomment-255857318
+		{rawText, `"foo"`, true}, // Issue6458
+		{&rawText, `"foo"`, true},
+		{[]interface{}{rawText}, `["foo"]`, true},  // Issue6458
+		{&[]interface{}{rawText}, `["foo"]`, true}, // Issue6458
+		{[]interface{}{&rawText}, `["foo"]`, true},
+		{&[]interface{}{&rawText}, `["foo"]`, true},
+		{struct{ M RawMessage }{rawText}, `{"M":"foo"}`, true}, // Issue6458
+		{&struct{ M RawMessage }{rawText}, `{"M":"foo"}`, true},
+		{struct{ M *RawMessage }{&rawText}, `{"M":"foo"}`, true},
+		{&struct{ M *RawMessage }{&rawText}, `{"M":"foo"}`, true},
+		{map[string]interface{}{"M": rawText}, `{"M":"foo"}`, true},  // Issue6458
+		{&map[string]interface{}{"M": rawText}, `{"M":"foo"}`, true}, // Issue6458
+		{map[string]interface{}{"M": &rawText}, `{"M":"foo"}`, true},
+		{&map[string]interface{}{"M": &rawText}, `{"M":"foo"}`, true},
+		{T1{rawText}, `{"M":"foo"}`, true}, // Issue6458
+		{T2{&rawText}, `{"M":"foo"}`, true},
+		{&T1{rawText}, `{"M":"foo"}`, true},
+		{&T2{&rawText}, `{"M":"foo"}`, true},
+	}
+
+	for i, tt := range tests {
+		b, err := Marshal(tt.in, nil)
+		if ok := (err == nil); ok != tt.ok {
+			if err != nil {
+				t.Errorf("test %d, unexpected failure: %v", i, err)
+			} else {
+				t.Errorf("test %d, unexpected success", i)
+			}
+		}
+		if got := string(b); got != tt.want {
+			t.Errorf("test %d, Marshal(%#v) = %q, want %q", i, tt.in, got, tt.want)
+		}
+	}
+}
+
 type marshalPanic struct{}
 
 func (marshalPanic) MarshalJSON() ([]byte, error) { panic(0xdead) }
@@ -873,5 +1097,32 @@ func TestMarshalUncommonFieldNames(t *testing.T) {
 	got := string(b)
 	if got != want {
 		t.Fatalf("Marshal: got %s want %s", got, want)
+	}
+}
+
+func TestMarshalerError(t *testing.T) {
+	s := "test variable"
+	st := reflect.TypeOf(s)
+	errText := "json: test error"
+
+	tests := []struct {
+		err  *MarshalerError
+		want string
+	}{
+		{
+			&MarshalerError{st, fmt.Errorf(errText), ""},
+			"json: error calling MarshalJSON for type " + st.String() + ": " + errText,
+		},
+		{
+			&MarshalerError{st, fmt.Errorf(errText), "TestMarshalerError"},
+			"json: error calling TestMarshalerError for type " + st.String() + ": " + errText,
+		},
+	}
+
+	for i, tt := range tests {
+		got := tt.err.Error()
+		if got != tt.want {
+			t.Errorf("MarshalerError test %d, got: %s, want: %s", i, got, tt.want)
+		}
 	}
 }

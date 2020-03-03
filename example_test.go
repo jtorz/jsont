@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-func exampleMarshal() {
+func ExampleMarshal() {
 	type ColorGroup struct {
 		ID     int
 		Name   string
@@ -34,7 +34,7 @@ func exampleMarshal() {
 	// {"ID":1,"Name":"Reds","Colors":["Crimson","Red","Ruby","Maroon"]}
 }
 
-func exampleUnmarshal() {
+func ExampleUnmarshal() {
 	var jsonBlob = []byte(`[
 	{"Name": "Platypus", "Order": "Monotremata"},
 	{"Name": "Quoll",    "Order": "Dasyuromorphia"}
@@ -54,7 +54,7 @@ func exampleUnmarshal() {
 }
 
 // This example uses a Decoder to decode a stream of distinct JSON values.
-func exampleDecoder() {
+func ExampleDecoder() {
 	const jsonStream = `
 	{"Name": "Ed", "Text": "Knock knock."}
 	{"Name": "Sam", "Text": "Who's there?"}
@@ -84,7 +84,7 @@ func exampleDecoder() {
 }
 
 // This example uses a Decoder to decode a stream of distinct JSON values.
-func exampleDecoder_Token() {
+func ExampleDecoder_Token() {
 	const jsonStream = `
 	{"Message": "Hello", "Array": [1, 2, 3], "Null": null, "Number": 1.234}
 `
@@ -121,7 +121,7 @@ func exampleDecoder_Token() {
 }
 
 // This example uses a Decoder to decode a streaming array of JSON objects.
-func exampleDecoder_Decode_stream() {
+func ExampleDecoder_Decode_stream() {
 	const jsonStream = `
 	[
 		{"Name": "Ed", "Text": "Knock knock."},
@@ -170,11 +170,10 @@ func exampleDecoder_Decode_stream() {
 	// Sam: Go fmt who?
 	// Ed: Go fmt yourself!
 	// json.Delim: ]
-
 }
 
 // This example uses RawMessage to delay parsing part of a JSON message.
-func exampleRawMessage_unmarshal() {
+func ExampleRawMessage_unmarshal() {
 	type Color struct {
 		Space string
 		Point json.RawMessage // delay parsing until we know the color space
@@ -220,7 +219,7 @@ func exampleRawMessage_unmarshal() {
 }
 
 // This example uses RawMessage to use a precomputed JSON during marshal.
-func exampleRawMessage_marshal() {
+func ExampleRawMessage_marshal() {
 	h := json.RawMessage(`{"precomputed": true}`)
 
 	c := struct {
@@ -243,7 +242,7 @@ func exampleRawMessage_marshal() {
 	// }
 }
 
-func exampleIndent() {
+func ExampleIndent() {
 	type Road struct {
 		Name   string
 		Number int
@@ -274,7 +273,7 @@ func exampleIndent() {
 	// =]
 }
 
-func exampleMarshalIndent() {
+func ExampleMarshalIndent() {
 	data := map[string]int{
 		"a": 1,
 		"b": 2,
@@ -293,11 +292,19 @@ func exampleMarshalIndent() {
 	// <prefix>}
 }
 
-func exampleValid() {
+func ExampleValid() {
 	goodJSON := `{"example": 1}`
 	badJSON := `{"example":2:]}}`
 
 	fmt.Println(json.Valid([]byte(goodJSON)), json.Valid([]byte(badJSON)))
 	// Output:
 	// true false
+}
+
+func ExampleHTMLEscape() {
+	var out bytes.Buffer
+	json.HTMLEscape(&out, []byte(`{"Name":"<b>HTML content</b>"}`))
+	out.WriteTo(os.Stdout)
+	// Output:
+	//{"Name":"\u003cb\u003eHTML content\u003c/b\u003e"}
 }
