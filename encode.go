@@ -1309,6 +1309,7 @@ func typeFields(t reflect.Type) structFields {
 						index:     index,
 						typ:       ft,
 						omitEmpty: opts.Contains("omitempty"),
+						isDefault: opts.Contains("default"),
 						quoted:    quoted,
 					}
 					field.nameBytes = []byte(field.name)
