@@ -2,7 +2,7 @@
 
 This package was created to choose dynamically the struct fields to marshal.
 
-Forked from `go version go1.12.5 windows/amd64`
+Forked from `go version go1.16.3 windows/amd64`
 
 ## Usage
 
