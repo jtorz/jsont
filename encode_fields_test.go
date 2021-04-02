@@ -5,15 +5,15 @@ import (
 )
 
 type user struct {
-	ID      int    `json:"id,default"`
-	Name    string `json:"name,default"`
+	ID      int    `json:"id"`
+	Name    string `json:"name"`
 	Surname string `json:"surname"`
 	Age     int    `json:"age"`
-	Rol     rol    `json:"rol,default"`
-	Friend  *user  `json:"friend,default"`
+	Rol     rol    `json:"rol"`
+	Friend  *user  `json:"friend"`
 }
 type rol struct {
-	ID    int    `json:"id,default"`
+	ID    int    `json:"id"`
 	Rol   string `json:"rol_name"`
 	Group group  `json:"group"`
 }
@@ -69,14 +69,5 @@ func TestWithFields(t *testing.T) {
 	}
 	if got := string(bytes); got != want {
 		t.Errorf("Marshal([]user{j, k}, withFriends) = %#q, want %#q", got, want)
-	}
-
-	want = `[{"id":2,"name":"John","rol":{"id":1},"friend":{"id":1,"name":"Paul","rol":{"id":1},"friend":null}},{"id":4,"name":"Keith","rol":{"id":1},"friend":{"id":3,"name":"Mick","rol":{"id":1},"friend":null}}]`
-	bytes, err = Marshal([]user{j, k}, Defaults)
-	if err != nil {
-		t.Fatalf("Marshal([]user{j, k}, Defaults): %v", err)
-	}
-	if got := string(bytes); got != want {
-		t.Errorf("Marshal([]user{j, k}, Defaults) = %#q, want %#q", got, want)
 	}
 }

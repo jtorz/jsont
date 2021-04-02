@@ -31,17 +31,10 @@ type F map[string]F
 var (
 	//Recursive defines when a field is going to be marshalled with the same struct as the parent
 	Recursive = F{recursiveKey: nil}
-	//Defaults defines when a struct is going to be marshalled with the fields marked with the option `json:",default"`
-	//	type S {
-	//		Field  string `json:"field,default"`
-	//		Field2 int    `json:",default"`
-	//	}
-	Defaults = F{defaultsKey: nil}
 )
 
 const (
 	recursiveKey = "_jt_rec_"
-	defaultsKey  = "_jt_def_"
 )
 
 // Marshal returns the JSON encoding of v.
@@ -766,13 +759,8 @@ FieldLoop:
 			fv = fv.Field(i)
 		}
 		if fieldsTE != nil {
-			_, isDef := fieldsTE[defaultsKey]
 			_, hasField := fieldsTE[f.name]
-			if isDef {
-				if !f.isDefault {
-					continue
-				}
-			} else if !hasField {
+			if !hasField {
 				continue
 			}
 		}
@@ -792,8 +780,7 @@ FieldLoop:
 		} else {
 			subfields := fieldsTE[f.name]
 			_, isRec := subfields[recursiveKey]
-			_, isDef := fieldsTE[defaultsKey]
-			if isRec || isDef {
+			if isRec {
 				f.encoder(e, fv, opts, fieldsTE)
 			} else {
 				f.encoder(e, fv, opts, subfields)
