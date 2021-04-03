@@ -5,13 +5,21 @@ import (
 )
 
 type user struct {
-	ID      int    `json:"id"`
-	Name    string `json:"name"`
-	Surname string `json:"surname"`
-	Age     int    `json:"age"`
-	Rol     rol    `json:"rol"`
-	Friend  *user  `json:"friend"`
+	ID        int           `json:"id"`
+	Name      string        `json:"name"`
+	Surname   string        `json:"surname"`
+	Age       int           `json:"age"`
+	Rol       rol           `json:"rol"`
+	Friend    *user         `json:"friend"`
+	Marshaler marshalerTest `json:"marshaler"`
 }
+
+type marshalerTest struct{}
+
+func (m marshalerTest) MarshalJSONFields(whitelist F) ([]byte, error) {
+	return []byte(`""`), nil
+}
+
 type rol struct {
 	ID    int    `json:"id"`
 	Rol   string `json:"rol_name"`
@@ -25,11 +33,11 @@ type group struct {
 
 func TestWithFields(t *testing.T) {
 	var err error
-	p := user{1, "Paul", "McCartney", 19, rol{1, "admin", group{1, "ABC4", 12.9}}, nil}
-	j := user{2, "John", "Lennon", 20, rol{1, "admin", group{1, "ABC4", 12.9}}, &p}
+	p := user{1, "Paul", "McCartney", 19, rol{1, "admin", group{1, "ABC4", 12.9}}, nil, marshalerTest{}}
+	j := user{2, "John", "Lennon", 20, rol{1, "admin", group{1, "ABC4", 12.9}}, &p, marshalerTest{}}
 
-	m := user{3, "Mick", "Jagger", 18, rol{1, "admin", group{1, "ABC2", 12.9}}, nil}
-	k := user{4, "Keith", "Richards", 17, rol{1, "admin", group{1, "ABC2", 12.9}}, &m}
+	m := user{3, "Mick", "Jagger", 18, rol{1, "admin", group{1, "ABC2", 12.9}}, nil, marshalerTest{}}
+	k := user{4, "Keith", "Richards", 17, rol{1, "admin", group{1, "ABC2", 12.9}}, &m, marshalerTest{}}
 
 	fields := F{
 		"id":   nil,
@@ -38,8 +46,9 @@ func TestWithFields(t *testing.T) {
 			"rol_name": nil,
 			"group":    F{"key": nil},
 		},
+		"marshaler": nil,
 	}
-	want := `{"id":2,"name":"John","rol":{"rol_name":"admin","group":{"key":"ABC4"}}}`
+	want := `{"id":2,"name":"John","rol":{"rol_name":"admin","group":{"key":"ABC4"}},"marshaler":""}`
 	bytes, err := MarshalFields(j, fields)
 	if err != nil {
 		t.Fatalf("Marshal(j): %v", err)
@@ -48,7 +57,7 @@ func TestWithFields(t *testing.T) {
 		t.Errorf("Marshal(j) = %#q, want %#q", got, want)
 	}
 
-	want = `[{"id":2,"name":"John","rol":{"rol_name":"admin","group":{"key":"ABC4"}}},{"id":4,"name":"Keith","rol":{"rol_name":"admin","group":{"key":"ABC2"}}}]`
+	want = `[{"id":2,"name":"John","rol":{"rol_name":"admin","group":{"key":"ABC4"}},"marshaler":""},{"id":4,"name":"Keith","rol":{"rol_name":"admin","group":{"key":"ABC2"}},"marshaler":""}]`
 	bytes, err = MarshalFields([]user{j, k}, fields)
 	if err != nil {
 		t.Fatalf("Marshal([]user{j, k}): %v", err)

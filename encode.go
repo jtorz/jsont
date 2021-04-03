@@ -257,6 +257,11 @@ type Marshaler interface {
 	MarshalJSON() ([]byte, error)
 }
 
+// MarshalerFields can marshal themselves into valid JSON.
+type MarshalerFields interface {
+	MarshalJSONFields(whitelist F) ([]byte, error)
+}
+
 // An UnsupportedTypeError is returned by Marshal when attempting
 // to encode an unsupported value type.
 type UnsupportedTypeError struct {
@@ -439,8 +444,9 @@ func typeEncoder(t reflect.Type) encoderFunc {
 }
 
 var (
-	marshalerType     = reflect.TypeOf((*Marshaler)(nil)).Elem()
-	textMarshalerType = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
+	marshalerType       = reflect.TypeOf((*Marshaler)(nil)).Elem()
+	marshalerFieldsType = reflect.TypeOf((*MarshalerFields)(nil)).Elem()
+	textMarshalerType   = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
 )
 
 // newTypeEncoder constructs an encoderFunc for a type.
@@ -455,6 +461,12 @@ func newTypeEncoder(t reflect.Type, allowAddr bool) encoderFunc {
 	}
 	if t.Implements(marshalerType) {
 		return marshalerEncoder
+	}
+	if t.Kind() != reflect.Ptr && allowAddr && reflect.PtrTo(t).Implements(marshalerFieldsType) {
+		return newCondAddrEncoder(addrMarshalerFieldsEncoder, newTypeEncoder(t, false))
+	}
+	if t.Implements(marshalerFieldsType) {
+		return marshalerFieldsEncoder
 	}
 	if t.Kind() != reflect.Ptr && allowAddr && reflect.PtrTo(t).Implements(textMarshalerType) {
 		return newCondAddrEncoder(addrTextMarshalerEncoder, newTypeEncoder(t, false))
@@ -517,6 +529,26 @@ func marshalerEncoder(e *encodeState, v reflect.Value, opts encOpts, whitelist F
 	}
 }
 
+func marshalerFieldsEncoder(e *encodeState, v reflect.Value, opts encOpts, whitelist F) {
+	if v.Kind() == reflect.Ptr && v.IsNil() {
+		e.WriteString("null")
+		return
+	}
+	m, ok := v.Interface().(MarshalerFields)
+	if !ok {
+		e.WriteString("null")
+		return
+	}
+	b, err := m.MarshalJSONFields(whitelist)
+	if err == nil {
+		// copy JSON into buffer, checking validity.
+		err = compact(&e.Buffer, b, opts.escapeHTML)
+	}
+	if err != nil {
+		e.error(&MarshalerError{v.Type(), err, "MarshalJSON"})
+	}
+}
+
 func addrMarshalerEncoder(e *encodeState, v reflect.Value, opts encOpts, _ F) {
 	va := v.Addr()
 	if va.IsNil() {
@@ -525,6 +557,23 @@ func addrMarshalerEncoder(e *encodeState, v reflect.Value, opts encOpts, _ F) {
 	}
 	m := va.Interface().(Marshaler)
 	b, err := m.MarshalJSON()
+	if err == nil {
+		// copy JSON into buffer, checking validity.
+		err = compact(&e.Buffer, b, opts.escapeHTML)
+	}
+	if err != nil {
+		e.error(&MarshalerError{v.Type(), err, "MarshalJSON"})
+	}
+}
+
+func addrMarshalerFieldsEncoder(e *encodeState, v reflect.Value, opts encOpts, whitelist F) {
+	va := v.Addr()
+	if va.IsNil() {
+		e.WriteString("null")
+		return
+	}
+	m := va.Interface().(MarshalerFields)
+	b, err := m.MarshalJSONFields(whitelist)
 	if err == nil {
 		// copy JSON into buffer, checking validity.
 		err = compact(&e.Buffer, b, opts.escapeHTML)
