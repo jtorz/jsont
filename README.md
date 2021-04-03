@@ -14,7 +14,7 @@ package main
 import (
     "fmt"
 
-    "github.com/jtorz/jsont"
+    "github.com/jtorz/jsont/v2"
 )
 
 type user struct {
@@ -121,7 +121,7 @@ import (
     "log"
     "net/http"
 
-    "github.com/jtorz/jsont"
+    "github.com/jtorz/jsont/v2"
 )
 
 type SearchResult struct {
