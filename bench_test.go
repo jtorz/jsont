@@ -62,7 +62,7 @@ func codeInit() {
 		panic("unmarshal code.json: " + err.Error())
 	}
 
-	if data, err = Marshal(&codeStruct, nil); err != nil {
+	if data, err = Marshal(&codeStruct); err != nil {
 		panic("marshal code.json: " + err.Error())
 	}
 
@@ -107,7 +107,7 @@ func BenchmarkCodeMarshal(b *testing.B) {
 	}
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			if _, err := Marshal(&codeStruct, nil); err != nil {
+			if _, err := Marshal(&codeStruct); err != nil {
 				b.Fatal("Marshal:", err)
 			}
 		}
@@ -126,7 +126,7 @@ func benchMarshalBytes(n int) func(*testing.B) {
 	}
 	return func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			if _, err := Marshal(v, nil); err != nil {
+			if _, err := Marshal(v); err != nil {
 				b.Fatal("Marshal:", err)
 			}
 		}
@@ -305,7 +305,7 @@ func BenchmarkIssue34127(b *testing.B) {
 	}
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			if _, err := Marshal(&j, nil); err != nil {
+			if _, err := Marshal(&j); err != nil {
 				b.Fatal(err)
 			}
 		}
@@ -328,6 +328,9 @@ func BenchmarkUnmapped(b *testing.B) {
 func BenchmarkTypeFieldsCache(b *testing.B) {
 	b.ReportAllocs()
 	var maxTypes int = 1e6
+
+	// use of internal package internal/testenv is not allowed.
+	// if testenv.Builder() != ""
 	if os.Getenv("GO_BUILDER_NAME") != "" {
 		maxTypes = 1e3 // restrict cache sizes on builders
 	}

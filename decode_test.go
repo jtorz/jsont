@@ -983,7 +983,7 @@ var unmarshalTests = []unmarshalTest{
 }
 
 func TestMarshal(t *testing.T) {
-	b, err := Marshal(allValue, nil)
+	b, err := Marshal(allValue)
 	if err != nil {
 		t.Fatalf("Marshal allValue: %v", err)
 	}
@@ -993,7 +993,7 @@ func TestMarshal(t *testing.T) {
 		return
 	}
 
-	b, err = Marshal(pallValue, nil)
+	b, err = Marshal(pallValue)
 	if err != nil {
 		t.Fatalf("Marshal pallValue: %v", err)
 	}
@@ -1017,7 +1017,7 @@ var badUTF8 = []struct {
 
 func TestMarshalBadUTF8(t *testing.T) {
 	for _, tt := range badUTF8 {
-		b, err := Marshal(tt.in, nil)
+		b, err := Marshal(tt.in)
 		if string(b) != tt.out || err != nil {
 			t.Errorf("Marshal(%q) = %#q, %v, want %#q, nil", tt.in, b, err, tt.out)
 		}
@@ -1026,7 +1026,7 @@ func TestMarshalBadUTF8(t *testing.T) {
 
 func TestMarshalNumberZeroVal(t *testing.T) {
 	var n Number
-	out, err := Marshal(n, nil)
+	out, err := Marshal(n)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1068,7 +1068,7 @@ func TestMarshalEmbeds(t *testing.T) {
 			Q: 18,
 		},
 	}
-	b, err := Marshal(top, nil)
+	b, err := Marshal(top)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1138,16 +1138,16 @@ func TestUnmarshal(t *testing.T) {
 		}
 		if !reflect.DeepEqual(v.Elem().Interface(), tt.out) {
 			t.Errorf("#%d: mismatch\nhave: %#+v\nwant: %#+v", i, v.Elem().Interface(), tt.out)
-			data, _ := Marshal(v.Elem().Interface(), nil)
+			data, _ := Marshal(v.Elem().Interface())
 			println(string(data))
-			data, _ = Marshal(tt.out, nil)
+			data, _ = Marshal(tt.out)
 			println(string(data))
 			continue
 		}
 
 		// Check round trip also decodes correctly.
 		if tt.err == nil {
-			enc, err := Marshal(v.Interface(), nil)
+			enc, err := Marshal(v.Interface())
 			if err != nil {
 				t.Errorf("#%d: error re-marshaling: %v", i, err)
 				continue
@@ -1180,7 +1180,7 @@ func TestUnmarshalMarshal(t *testing.T) {
 	if err := Unmarshal(jsonBig, &v); err != nil {
 		t.Fatalf("Unmarshal: %v", err)
 	}
-	b, err := Marshal(v, nil)
+	b, err := Marshal(v)
 	if err != nil {
 		t.Fatalf("Marshal: %v", err)
 	}
@@ -1228,7 +1228,7 @@ func TestLargeByteSlice(t *testing.T) {
 	for i := range s0 {
 		s0[i] = byte(i)
 	}
-	b, err := Marshal(s0, nil)
+	b, err := Marshal(s0)
 	if err != nil {
 		t.Fatalf("Marshal: %v", err)
 	}
@@ -1271,7 +1271,7 @@ func TestUnmarshalPtrPtr(t *testing.T) {
 func TestEscape(t *testing.T) {
 	const input = `"foobar"<html>` + " [\u2028 \u2029]"
 	const expected = `"\"foobar\"\u003chtml\u003e [\u2028 \u2029]"`
-	b, err := Marshal(input, nil)
+	b, err := Marshal(input)
 	if err != nil {
 		t.Fatalf("Marshal error: %v", err)
 	}
@@ -1930,7 +1930,7 @@ func TestStringKind(t *testing.T) {
 		"foo": 42,
 	}
 
-	data, err := Marshal(m1, nil)
+	data, err := Marshal(m1)
 	if err != nil {
 		t.Errorf("Unexpected error marshaling: %v", err)
 	}
@@ -1953,7 +1953,7 @@ func TestByteKind(t *testing.T) {
 
 	a := byteKind("hello")
 
-	data, err := Marshal(a, nil)
+	data, err := Marshal(a)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1974,7 +1974,7 @@ func TestSliceOfCustomByte(t *testing.T) {
 
 	a := []Uint8("hello")
 
-	data, err := Marshal(a, nil)
+	data, err := Marshal(a)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2209,7 +2209,7 @@ func TestInvalidStringOption(t *testing.T) {
 		P *int              `json:",string"`
 	}{M: make(map[string]string), S: make([]string, 0), I: num, P: &num}
 
-	data, err := Marshal(item, nil)
+	data, err := Marshal(item)
 	if err != nil {
 		t.Fatalf("Marshal: %v", err)
 	}
@@ -2448,7 +2448,7 @@ func TestUnmarshalRescanLiteralMangledUnquote(t *testing.T) {
 	}
 	t1 := T{"aaa\tbbb"}
 
-	b, err := Marshal(t1, nil)
+	b, err := Marshal(t1)
 	if err != nil {
 		t.Fatalf("Marshal unexpected error: %v", err)
 	}
@@ -2463,7 +2463,7 @@ func TestUnmarshalRescanLiteralMangledUnquote(t *testing.T) {
 	// See golang.org/issues/39555.
 	input := map[textUnmarshalerString]string{"FOO": "", `"`: ""}
 
-	encoded, err := Marshal(input, nil)
+	encoded, err := Marshal(input)
 	if err != nil {
 		t.Fatalf("Marshal unexpected error: %v", err)
 	}

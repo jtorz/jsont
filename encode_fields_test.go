@@ -40,7 +40,7 @@ func TestWithFields(t *testing.T) {
 		},
 	}
 	want := `{"id":2,"name":"John","rol":{"rol_name":"admin","group":{"key":"ABC4"}}}`
-	bytes, err := Marshal(j, fields)
+	bytes, err := MarshalFields(j, fields)
 	if err != nil {
 		t.Fatalf("Marshal(j): %v", err)
 	}
@@ -49,7 +49,7 @@ func TestWithFields(t *testing.T) {
 	}
 
 	want = `[{"id":2,"name":"John","rol":{"rol_name":"admin","group":{"key":"ABC4"}}},{"id":4,"name":"Keith","rol":{"rol_name":"admin","group":{"key":"ABC2"}}}]`
-	bytes, err = Marshal([]user{j, k}, fields)
+	bytes, err = MarshalFields([]user{j, k}, fields)
 	if err != nil {
 		t.Fatalf("Marshal([]user{j, k}): %v", err)
 	}
@@ -63,7 +63,7 @@ func TestWithFields(t *testing.T) {
 		"friend": Recursive,
 	}
 	want = `[{"id":2,"name":"John","friend":{"id":1,"name":"Paul","friend":null}},{"id":4,"name":"Keith","friend":{"id":3,"name":"Mick","friend":null}}]`
-	bytes, err = Marshal([]user{j, k}, withFriends)
+	bytes, err = MarshalFields([]user{j, k}, withFriends)
 	if err != nil {
 		t.Fatalf("Marshal([]user{j, k}, withFriends): %v", err)
 	}

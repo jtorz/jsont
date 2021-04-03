@@ -252,7 +252,7 @@ func TestRawMessage(t *testing.T) {
 	if string([]byte(data.Id)) != raw {
 		t.Fatalf("Raw mismatch: have %#q want %#q", []byte(data.Id), raw)
 	}
-	b, err := Marshal(&data, nil)
+	b, err := Marshal(&data)
 	if err != nil {
 		t.Fatalf("Marshal: %v", err)
 	}
@@ -279,7 +279,7 @@ func TestNullRawMessage(t *testing.T) {
 	if data.IdPtr != nil {
 		t.Fatalf("Raw pointer mismatch: have non-nil, want nil")
 	}
-	b, err := Marshal(&data, nil)
+	b, err := Marshal(&data)
 	if err != nil {
 		t.Fatalf("Marshal: %v", err)
 	}
