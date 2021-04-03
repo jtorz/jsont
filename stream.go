@@ -199,11 +199,22 @@ func NewEncoder(w io.Writer) *Encoder {
 // See the documentation for Marshal for details about the
 // conversion of Go values to JSON.
 func (enc *Encoder) Encode(v interface{}) error {
+	return enc.EncodeFields(v, nil)
+}
+
+// Encode writes the JSON encoding of v to the stream,
+// followed by a newline character.
+//
+// See the documentation for Marshal for details about the
+// conversion of Go values to JSON.
+//
+// It is possible to use a whitelist of fields to include.
+func (enc *Encoder) EncodeFields(v interface{}, whitelist F) error {
 	if enc.err != nil {
 		return enc.err
 	}
 	e := newEncodeState()
-	err := e.marshal(v, encOpts{escapeHTML: enc.escapeHTML}, nil)
+	err := e.marshal(v, encOpts{escapeHTML: enc.escapeHTML}, whitelist)
 	if err != nil {
 		return err
 	}
